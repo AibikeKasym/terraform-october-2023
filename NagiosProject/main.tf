@@ -129,6 +129,7 @@ data "aws_ami" "ubuntu" {
     values = ["hvm"]
   }
 }
+
 resource "aws_instance" "example" {
   ami           = data.aws_ami.ubuntu.id
   instance_type = "t2.micro"
@@ -152,19 +153,28 @@ resource "null_resource" "install_nagios" {
     instance_id = aws_instance.example.id
   }
 
+  depends_on = [aws_instance.example]
+
   # Connection details for SSH
   connection {
     type        = "ssh"
     user        = "ubuntu"
-    private_key = file("~/.ssh/id_rsa.pub")
+    private_key = file("~/.ssh/id_rsa") # Use the private key here
     host        = aws_instance.example.public_ip
   }
+}
 
-  # Provisioner block
+resource "null_resource" "example" {
+  triggers = {
+    instance_id = aws_instance.example.id
+  }
+
   provisioner "remote-exec" {
     inline = [
-      "sudo apt-get update",
-      "sudo apt-get install -y nagios3"
+      "sleep 180",
+      "bash /home/ec2-user/terraform-october-2023/NagiosProject/script.sh"
     ]
   }
+
+  depends_on = [aws_instance.example]
 }
