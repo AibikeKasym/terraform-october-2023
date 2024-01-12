@@ -36,4 +36,4 @@ echo "657045A"
 read -s password
 
 # Create a password file for Nagios
-echo $password | sudo htpasswd -i -c /usr/local/nagios/etc/htpasswd.users $username
+sudo htpasswd -i -c /usr/local/nagios/etc/htpasswd.users $username | echo $password 

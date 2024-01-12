@@ -136,6 +136,7 @@ resource "aws_instance" "example" {
   key_name      = aws_key_pair.deployer.key_name
   subnet_id     = aws_subnet.group_3_subnet_1.id
   vpc_security_group_ids = [aws_security_group.group_3_sg.id]
+  user_data = file("userdata.sh")
 
   tags = {
     Name = "Group-3-Instance"
@@ -164,17 +165,17 @@ resource "null_resource" "install_nagios" {
   }
 }
 
-resource "null_resource" "example" {
-  triggers = {
-    instance_id = aws_instance.example.id
-  }
+# resource "null_resource" "example" {
+#   triggers = {
+#     instance_id = aws_instance.example.id
+#   }
 
-  provisioner "remote-exec" {
-    inline = [
-      "sleep 180",
-      "bash /home/ec2-user/terraform-october-2023/NagiosProject/script.sh"
-    ]
-  }
+#   provisioner "remote-exec" {
+#     inline = [
+#       "sleep 180",
+#       "bash /home/ec2-user/terraform-october-2023/NagiosProject/script.sh" 
+#     ]
+#   }
 
-  depends_on = [aws_instance.example]
-}
+#   depends_on = [aws_instance.example]
+# }
