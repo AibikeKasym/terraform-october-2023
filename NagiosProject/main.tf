@@ -1,141 +1,112 @@
-# Provider block
 provider "aws" {
   region = var.region
 }
 
-# Create VPC
-resource "aws_vpc" "group_3_vpc" {
-  cidr_block = var.vpc_cidr_block
-  
+resource "aws_vpc" "main" {
+  cidr_block = var.cidr
   tags = {
-    Name = "group-3"
+    Name = var.vpc_name
   }
 }
 
-# Create Internet Gateway and attach it to VPC  
-resource "aws_internet_gateway" "group_3_igw" {
-  vpc_id = aws_vpc.group_3_vpc.id
+resource "aws_subnet" "main1" {
+  vpc_id     = aws_vpc.main.id
+  cidr_block = var.subnet1_cidr
 
   tags = {
-    Name = "group-3-igw"
+    Name = var.subnet1_name
   }
 }
 
-# Create 3 subnets
-resource "aws_subnet" "group_3_subnet_1" {
-  vpc_id = aws_vpc.group_3_vpc.id
-  cidr_block = var.subnet_cidr_blocks[0]
-  availability_zone = var.availability_zones[0]
+resource "aws_subnet" "main2" {
+  vpc_id     = aws_vpc.main.id
+  cidr_block = var.subnet2_cidr
 
   tags = {
-    Name = "Group-3-Subnet-1"
+    Name = var.subnet2_name
   }
 }
 
-resource "aws_subnet" "group_3_subnet_2" {
-  vpc_id = aws_vpc.group_3_vpc.id
-  cidr_block = var.subnet_cidr_blocks[1]
-  availability_zone = var.availability_zones[1]
+resource "aws_subnet" "main3" {
+  vpc_id     = aws_vpc.main.id
+  cidr_block = var.subnet3_cidr
 
   tags = {
-    Name = "Group-3-Subnet-2" 
+    Name = var.subnet3_name
   }
 }
 
-resource "aws_subnet" "group_3_subnet_3" {
-  vpc_id = aws_vpc.group_3_vpc.id
-  cidr_block = var.subnet_cidr_blocks[2]
-  availability_zone = var.availability_zones[2]
+resource "aws_internet_gateway" "gw" {
+  vpc_id = aws_vpc.main.id
 
   tags = {
-    Name = "Group-3-Subnet-3"
+    Name = "main"
   }
 }
 
-# Create route table and add public route
-resource "aws_route_table" "group_3_public_rt" {
-  vpc_id = aws_vpc.group_3_vpc.id
+resource "aws_route_table" "route" {
+  vpc_id = aws_vpc.main.id
 
   route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.group_3_igw.id
+    cidr_block = var.rt_cidr
+    gateway_id = aws_internet_gateway.gw.id
   }
 
   tags = {
-    Name = "Group-3-Public-RT"
+    Name = "example"
   }
 }
 
-# Associate subnets with route table
-resource "aws_route_table_association" "group_3_rt_assoc_1" {
-  subnet_id = aws_subnet.group_3_subnet_1.id
-  route_table_id = aws_route_table.group_3_public_rt.id
+resource "aws_route_table_association" "a" {
+  subnet_id      = aws_subnet.main1.id
+  route_table_id = aws_route_table.route.id
 }
 
-resource "aws_route_table_association" "group_3_rt_assoc_2" {
-  subnet_id = aws_subnet.group_3_subnet_2.id
-  route_table_id = aws_route_table.group_3_public_rt.id
+resource "aws_route_table_association" "b" {
+  subnet_id      = aws_subnet.main2.id
+  route_table_id = aws_route_table.route.id
 }
 
-resource "aws_route_table_association" "group_3_rt_assoc_3" {
-  subnet_id = aws_subnet.group_3_subnet_3.id
-  route_table_id = aws_route_table.group_3_public_rt.id
+resource "aws_route_table_association" "c" {
+  subnet_id      = aws_subnet.main3.id
+  route_table_id = aws_route_table.route.id
 }
 
-# Create security group 
-resource "aws_security_group" "group_3_sg" {
-  name = "group-N3"
-  description = "Allow traffic for Nagios"
-  vpc_id = aws_vpc.group_3_vpc.id
+resource "aws_security_group" "allow_tls" {
+  name        = "allow_tls"
+  description = "Allow TLS inbound traffic"
 
-  # Allow SSH  
   ingress {
-    description = "Allow SSH"
-    from_port = 22
-    to_port = 22
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description      = "TLS from VPC"
+    from_port        = 22
+    to_port          = 22
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
   }
 
-  # Allow HTTP for Nagios
   ingress {
-    description = "Allow HTTP for Nagios"  
-    from_port = 80
-    to_port = 80
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description      = "TLS from VPC"
+    from_port        = 80
+    to_port          = 80
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
   }
 
   egress {
-    from_port = 0
-    to_port = 0 
-    protocol = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # Allow outbound SSH
-  egress {
-    description = "Allow outbound SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-   egress {
-    description = "Allow HTTP for Nagios"  
-    from_port = 80
-    to_port = 80
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
   }
 }
 
+resource "aws_key_pair" "deployer" {
+  key_name = "deployer-key"
+  public_key = file("/home/ec2-user/.ssh/id_rsa.pub")
+}
 
-# Create EC2 instance 
 data "aws_ami" "ubuntu" {
   most_recent = true
-  owners      = ["099720109477"] # Canonical
 
   filter {
     name   = "name"
@@ -146,56 +117,30 @@ data "aws_ami" "ubuntu" {
     name   = "virtualization-type"
     values = ["hvm"]
   }
+
+  owners = ["099720109477"] # Canonical
 }
 
-resource "aws_instance" "example" {
+resource "aws_instance" "web" {
   ami           = data.aws_ami.ubuntu.id
-  instance_type = "t2.xlarge"
-  key_name      = aws_key_pair.deployer.key_name
-  subnet_id     = aws_subnet.group_3_subnet_1.id
-  vpc_security_group_ids = [aws_security_group.group_3_sg.id]
-  user_data = file("userdata.sh")
-
-  associate_public_ip_address = true // This line enables public DNS
-
+  instance_type = var.ec2_type
+  availability_zone = var.az
+  vpc_security_group_ids = [aws_security_group.allow_tls.id]
+  key_name = aws_key_pair.deployer.key_name
+  count = 1
+  user_data = file("/home/ec2-user/terraform/project/script.sh")
   tags = {
-    Name = "Group-3-Instance"
+    Name = var.ec2_name
   }
-}
-
-resource "aws_key_pair" "deployer" {
-  key_name   = "my_key_namea"
-  public_key = file("~/.ssh/id_rsa.pub")
 }
 
 resource "null_resource" "install_nagios" {
-  # Trigger re-provisioning when the instance id changes
-  triggers = {
-    instance_id = aws_instance.example.id
-  }
-
-  depends_on = [aws_instance.example]
 
   # Connection details for SSH
   connection {
     type        = "ssh"
     user        = "ubuntu"
     private_key = file("~/.ssh/id_rsa") # Use the private key here
-    host        = aws_instance.example.public_ip
+    host        = aws_instance.web.public_ip
   }
 }
-
-# resource "null_resource" "example" {
-#   triggers = {
-#     instance_id = aws_instance.example.id
-#   }
-
-#   provisioner "remote-exec" {
-#     inline = [
-#       "sleep 180",
-#       "bash /home/ec2-user/terraform-october-2023/NagiosProject/script.sh" 
-#     ]
-#   }
-
-#   depends_on = [aws_instance.example]
-# }
