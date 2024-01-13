@@ -112,7 +112,25 @@ resource "aws_security_group" "group_3_sg" {
     protocol = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  # Allow outbound SSH
+  egress {
+    description = "Allow outbound SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+   egress {
+    description = "Allow HTTP for Nagios"  
+    from_port = 80
+    to_port = 80
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
+
 
 # Create EC2 instance 
 data "aws_ami" "ubuntu" {
@@ -132,11 +150,13 @@ data "aws_ami" "ubuntu" {
 
 resource "aws_instance" "example" {
   ami           = data.aws_ami.ubuntu.id
-  instance_type = "t2.micro"
+  instance_type = "t2.xlarge"
   key_name      = aws_key_pair.deployer.key_name
   subnet_id     = aws_subnet.group_3_subnet_1.id
   vpc_security_group_ids = [aws_security_group.group_3_sg.id]
   user_data = file("userdata.sh")
+
+  associate_public_ip_address = true // This line enables public DNS
 
   tags = {
     Name = "Group-3-Instance"
