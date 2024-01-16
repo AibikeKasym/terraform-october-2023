@@ -22,6 +22,7 @@ variable "ami_owner" {
 
 variable "ami_name_pattern" {
   description = "Name pattern of the AMI"
+
 }
 
 variable "instance_type" {
